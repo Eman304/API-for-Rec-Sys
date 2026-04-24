@@ -3,11 +3,12 @@ from pydantic import BaseModel
 import pandas as pd
 import joblib
 from sklearn.metrics.pairwise import linear_kernel
+import os
 
 # =========================
-# إنشاء التطبيق
+# إعداد التطبيق
 # =========================
-app = FastAPI(title="Recommendation System API")
+app = FastAPI(title="Recommendation System API 🚀")
 
 # =========================
 # تحميل البيانات مرة واحدة
@@ -19,15 +20,20 @@ except Exception as e:
     raise RuntimeError(f"Error loading data: {e}")
 
 # =========================
-# request model (POST)
+# تحديد البورت (مهم لـ Railway)
+# =========================
+PORT = int(os.environ.get("PORT", 8000))
+
+# =========================
+# Request Model (POST)
 # =========================
 class RecommendationRequest(BaseModel):
-    content_id: int = None
-    title: str = None
+    content_id: int | None = None
+    title: str | None = None
     top_n: int = 5
 
 # =========================
-# functions
+# Functions
 # =========================
 
 def get_index_by_id(content_id):
@@ -46,24 +52,19 @@ def get_index_by_title(title):
 
 def generate_recommendations(idx, top_n=5):
     cosine_sim = linear_kernel(tfidf_matrix[idx], tfidf_matrix).flatten()
-
     similar_indices = cosine_sim.argsort()[-top_n-1:-1][::-1]
-
     results = content.iloc[similar_indices][['content_id', 'title']]
-
     return results.to_dict(orient="records")
 
-
 # =========================
-# endpoints
+# Endpoints
 # =========================
 
 @app.get("/")
 def home():
     return {"message": "🔥 Recommendation API is running"}
 
-
-# 🔹 باستخدام content_id
+# 🔹 باستخدام ID
 @app.get("/recommend/id/{content_id}")
 def recommend_by_id(content_id: int, top_n: int = 5):
     idx = get_index_by_id(content_id)
@@ -79,9 +80,8 @@ def recommend_by_id(content_id: int, top_n: int = 5):
         "recommendations": recs
     }
 
-
-# 🔹 باستخدام title
-@app.get("/recommend/title/")
+# 🔹 باستخدام Title
+@app.get("/recommend/title")
 def recommend_by_title(title: str, top_n: int = 5):
     idx = get_index_by_title(title)
 
@@ -96,8 +96,7 @@ def recommend_by_title(title: str, top_n: int = 5):
         "recommendations": recs
     }
 
-
-# 🔹 POST (احترافي)
+# 🔹 POST Endpoint
 @app.post("/recommend")
 def recommend_post(request: RecommendationRequest):
 
